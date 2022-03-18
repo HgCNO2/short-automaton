@@ -5,6 +5,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 
+
 # Define function to get authorization
 def gsc_auth(scopes):
     creds = None
@@ -29,6 +30,49 @@ def gsc_auth(scopes):
 
     return service
 
-scopes = ['https://www.googleapis.com/auth/webmasters']
 
-service = gsc_auth(scopes)
+# Define List of Sites Function
+def get_sites(service):
+    return service.sites().list().execute()
+
+
+# Define List of Sitemaps Function
+def get_sitemaps(service, property_uri):
+    return service.sitemaps().list(siteUrl=property_uri).execute()
+
+
+# Define Query Execution Function
+def query_gsc(service, property_uri, request):
+    return service.searchanalytics().query(siteUrl=property_uri, body=request).execute()
+
+
+# Define Inspect URL Function
+def inspect_url(service, request):
+    return service.urlInspection().index().inspect(body=request).execute()
+
+
+if __name__ == '__main__':
+    scopes = ['https://www.googleapis.com/auth/webmasters']
+    service = gsc_auth(scopes)
+    gsc_sites = get_sites(service)
+    gsc_sitemaps = get_sitemaps(service, 'sc-domain:shortautomaton.com')
+
+    sa_request = {
+        "startDate": "2022-03-01",
+        "endDate": "2022-03-15",
+        "dimensions": [
+            "QUERY",
+            "PAGE"
+        ],
+        "rowLimit": 10
+    }
+
+    gsc_search_analytics = query_gsc(service, 'sc-domain:shortautomaton.com', sa_request)
+
+    inspect_request = {
+        "siteUrl": "sc-domain:shortautomaton.com",
+        "inspectionUrl": "https://www.shortautomaton.com/",
+    }
+
+    gsc_inspect = inspect_url(service, inspect_request)
+
