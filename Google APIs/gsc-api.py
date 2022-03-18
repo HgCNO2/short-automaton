@@ -75,4 +75,3 @@ if __name__ == '__main__':
     }
 
     gsc_inspect = inspect_url(service, inspect_request)
-
