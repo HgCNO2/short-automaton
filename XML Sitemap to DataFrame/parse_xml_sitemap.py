@@ -3,6 +3,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 import requests
 from lxml.etree import XMLSyntaxError
+import gzip
 
 
 def extract_urls(sitemap, index=False):
@@ -27,22 +28,29 @@ def parse_sitemap(sitemap, **kwargs):
     if not resp.ok:
         print(f'Unable to fetch sitemap. Request returned HTTP Response {resp.status_code}. Please check your input.')
         return None
-    soup = BeautifulSoup(resp.content, 'xml')
+    if resp.headers['Content-Type'] == 'application/x-gzip':
+        content = gzip.decompress(resp.content)
+    else:
+        content = resp.content
+    soup = BeautifulSoup(content, 'xml')
     if soup.select('sitemapindex'):
-        sitemaps = pd.read_xml(resp.content)
+        sitemaps = pd.read_xml(content)
         for each_sitemap in sitemaps['loc'].tolist():
             resp = requests.get(each_sitemap, **kwargs)
             if resp.ok:
-                urls = pd.concat([urls, pd.read_xml(resp.content)])
+                if resp.headers['Content-Type'] == 'application/x-gzip':
+                    content = gzip.decompress(resp.content)
+                else:
+                    content = resp.content
+                urls = pd.concat([urls, pd.read_xml(content)])
             else:
                 print(f'Unable to fetch {each_sitemap}. Request returned HTTP Response {resp.status_code}.')
     else:
-        urls = pd.read_xml(resp.content)
+        urls = pd.read_xml(content)
     return urls
 
 
 if __name__ == '__main__':
-    # TODO Debug 403: Forbidden when using Pandas
+    test_pandas = extract_urls('https://schema.org/docs/sitemap.xml')
     test_df = parse_sitemap('https://www.screamingfrog.co.uk/sitemap.xml')
-    test_df = extract_urls('https://www.screamingfrog.co.uk/sitemap.xml', True)
-    # test_df = extract_urls('https://www.condo-world.com/sitemap.xml', False)
+    test_gzip = parse_sitemap('https://www.dictionary.com/dictionary-sitemap/sitemap.xml')
